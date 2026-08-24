@@ -25,7 +25,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
     @Value("${app.frontend-url:http://localhost:5173}")
     private String frontendUrl;
-
+/*
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, LoginNotificationService notificationService) throws Exception {
         http
@@ -39,8 +39,8 @@ public class SecurityConfig {
             .oauth2Login(oauth -> oauth.successHandler(authenticationSuccessHandler(notificationService)))
             .logout(logout -> logout.logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)));
         return http.build();
-    }
-
+    }*/
+/*
     @Bean
     AuthenticationSuccessHandler authenticationSuccessHandler(LoginNotificationService notificationService) {
         SimpleUrlAuthenticationSuccessHandler handler = new SimpleUrlAuthenticationSuccessHandler(frontendUrl + "/dashboard");
@@ -54,7 +54,7 @@ public class SecurityConfig {
             }
             handler.onAuthenticationSuccess(request, response, authenticated);
         };
-    }
+    }*/
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
@@ -66,6 +66,31 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+    
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/oauth2/**", "/login/**", "/api/auth/me", "/error").permitAll()
+                .requestMatchers("/api/admin/logs/**").authenticated()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .anyRequest().authenticated())
+            // Pass the simplified handler without the notification service
+            .oauth2Login(oauth -> oauth.successHandler(authenticationSuccessHandler()))
+            .logout(logout -> logout.logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)));
+        return http.build();
+    }
+
+    @Bean
+    AuthenticationSuccessHandler authenticationSuccessHandler() {
+        SimpleUrlAuthenticationSuccessHandler handler = new SimpleUrlAuthenticationSuccessHandler(frontendUrl + "/dashboard");
+        handler.setAlwaysUseDefaultTargetUrl(true);
+        
+        // Return the handler directly. No email sending logic is executed.
+        return handler;
     }
 
     @RestController
